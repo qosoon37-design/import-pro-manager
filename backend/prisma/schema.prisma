@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  GENERAL_MANAGER
+  DEPUTY_MANAGER
+  WAREHOUSE_MANAGER
+  BRANCH_USER
+  AUDITOR
+}
+
+enum TransactionType {
+  PURCHASE
+  SALE
+  TRANSFER_IN
+  TRANSFER_OUT
+  DAMAGE
+  ADJUSTMENT
+  INITIAL_LOAD
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  ROLLED_BACK
+}
+
+enum AlertType {
+  LOW_STOCK
+  OUT_OF_STOCK
+  PRICE_CHANGE
+  EXPIRY_WARNING
+  TRANSFER_PENDING
+  DAMAGE_REPORTED
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ==================== USERS & AUTH ====================
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  name            String
+  nameAr          String?
+  phone           String?
+  role            UserRole  @default(BRANCH_USER)
+  isActive        Boolean   @default(true)
+  twoFactorSecret String?
+  twoFactorEnabled Boolean  @default(false)
+  branchId        String?
+  branch          Branch?   @relation(fields: [branchId], references: [id])
+  
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  transactions    Transaction[]
+  imports         ExcelImport[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([branchId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token        String   @unique
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ==================== BRANCHES ====================
+
+model Branch {
+  id           String    @id @default(uuid())
+  code         String    @unique
+  name         String
+  nameAr       String
+  address      String?
+  addressAr    String?
+  phone        String?
+  email        String?
+  isActive     Boolean   @default(true)
+  isMainBranch Boolean   @default(false)
+  
+  users        User[]
+  inventory    BranchInventory[]
+  transactions Transaction[]
+  priceOverrides BranchPriceOverride[]
+  transfersFrom Transfer[] @relation("TransferFrom")
+  transfersTo   Transfer[] @relation("TransferTo")
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([code])
+}
+
+// ==================== PRODUCTS ====================
+
+model Category {
+  id       String    @id @default(uuid())
+  code     String    @unique
+  name     String
+  nameAr   String
+  parentId String?
+  parent   Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id           String    @id @default(uuid())
+  sku          String    @unique
+  barcode      String?   @unique
+  name         String
+  nameAr       String
+  description  String?
+  descriptionAr String?
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id])
+  unit         String    @default("piece")
+  unitAr       String    @default("قطعة")
+  
+  costPrice    Decimal   @db.Decimal(12, 2)
+  sellPrice    Decimal   @db.Decimal(12, 2)
+  minPrice     Decimal?  @db.Decimal(12, 2)
+  maxPrice     Decimal?  @db.Decimal(12, 2)
+  
+  reorderLevel Int       @default(10)
+  maxStock     Int?
+  
+  imageUrl     String?
+  isActive     Boolean   @default(true)
+  
+  inventory    BranchInventory[]
+  transactions TransactionItem[]
+  priceHistory PriceHistory[]
+  priceOverrides BranchPriceOverride[]
+  
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([sku])
+  @@index([barcode])
+  @@index([categoryId])
+}
+
+model BranchInventory {
+  id          String   @id @default(uuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id])
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int      @default(0)
+  reservedQty Int      @default(0)
+  lastCountAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([branchId, productId])
+  @@index([branchId])
+  @@index([productId])
+}
+
+model BranchPriceOverride {
+  id         String   @id @default(uuid())
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  sellPrice  Decimal  @db.Decimal(12, 2)
+  costPrice  Decimal? @db.Decimal(12, 2)
+  validFrom  DateTime @default(now())
+  validUntil DateTime?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([branchId, productId])
+  @@index([branchId])
+  @@index([productId])
+}
+
+model PriceHistory {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  oldCost     Decimal  @db.Decimal(12, 2)
+  newCost     Decimal  @db.Decimal(12, 2)
+  oldSell     Decimal  @db.Decimal(12, 2)
+  newSell     Decimal  @db.Decimal(12, 2)
+  reason      String?
+  changedBy   String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([productId])
+}
+
+// ==================== TRANSACTIONS ====================
+
+model Transaction {
+  id            String          @id @default(uuid())
+  type          TransactionType
+  branchId      String
+  branch        Branch          @relation(fields: [branchId], references: [id])
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  
+  reference     String?
+  notes         String?
+  notesAr       String?
+  totalAmount   Decimal         @db.Decimal(12, 2) @default(0)
+  
+  items         TransactionItem[]
+  transfer      Transfer?
+  
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([branchId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model TransactionItem {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id])
+  quantity      Int
+  unitPrice     Decimal     @db.Decimal(12, 2)
+  totalPrice    Decimal     @db.Decimal(12, 2)
+  serialNumber  String?
+  notes         String?
+
+  @@index([transactionId])
+  @@index([productId])
+}
+
+model Transfer {
+  id              String      @id @default(uuid())
+  transactionId   String      @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id])
+  fromBranchId    String
+  fromBranch      Branch      @relation("TransferFrom", fields: [fromBranchId], references: [id])
+  toBranchId      String
+  toBranch        Branch      @relation("TransferTo", fields: [toBranchId], references: [id])
+  status          String      @default("pending") // pending, in_transit, received, cancelled
+  receivedAt      DateTime?
+  receivedBy      String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([fromBranchId])
+  @@index([toBranchId])
+  @@index([status])
+}
+
+// ==================== EXCEL IMPORTS ====================
+
+model ExcelImport {
+  id           String       @id @default(uuid())
+  filename     String
+  originalName String
+  fileUrl      String?
+  fileHash     String?
+  type         String       // products, prices, inventory, initial_load
+  status       ImportStatus @default(PENDING)
+  
+  totalRows    Int          @default(0)
+  processedRows Int         @default(0)
+  errorRows    Int          @default(0)
+  
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  
+  errors       Json?
+  metadata     Json?
+  rollbackData Json?
+  
+  processedAt  DateTime?
+  rolledBackAt DateTime?
+  
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+// ==================== ALERTS & NOTIFICATIONS ====================
+
+model Alert {
+  id          String        @id @default(uuid())
+  type        AlertType
+  severity    AlertSeverity @default(INFO)
+  title       String
+  titleAr     String
+  message     String
+  messageAr   String
+  branchId    String?
+  productId   String?
+  isRead      Boolean       @default(false)
+  readAt      DateTime?
+  metadata    Json?
+  
+  createdAt   DateTime      @default(now())
+
+  @@index([type])
+  @@index([severity])
+  @@index([branchId])
+  @@index([isRead])
+}
+
+// ==================== AUDIT LOGS ====================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  action      String
+  entity      String
+  entityId    String?
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// ==================== UPLOADED IMAGES ====================
+
+model UploadedImage {
+  id           String   @id @default(uuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  url          String?
+  uploadedBy   String
+  sessionId    String?
+  ocrStatus    String?  @default("pending") // pending, processing, completed, failed
+  extractedData Json?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([uploadedBy])
+  @@index([sessionId])
+}
+
+// ==================== SYSTEM SETTINGS ====================
+
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+  type  String @default("string") // string, number, boolean, json
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
