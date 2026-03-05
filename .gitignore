@@ -35,3 +35,4 @@ backend/node_modules/.prisma/
 # Misc
 *.tmp
 *.temp
+.vercel

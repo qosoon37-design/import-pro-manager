@@ -9,6 +9,11 @@ const actionLabels: Record<string, string> = {
   login: 'دخول',
   logout: 'خروج',
   'image-upload': 'رفع صورة',
+  'branch-add': 'فرع جديد',
+  'branch-delete': 'حذف فرع',
+  'user-add': 'مستخدم جديد',
+  'user-delete': 'حذف مستخدم',
+  'excel-import': 'استيراد Excel',
 }
 
 const actionColors: Record<string, string> = {
@@ -19,6 +24,11 @@ const actionColors: Record<string, string> = {
   login: 'bg-gray-100 text-gray-700',
   logout: 'bg-gray-100 text-gray-700',
   'image-upload': 'bg-purple-100 text-purple-700',
+  'branch-add': 'bg-indigo-100 text-indigo-700',
+  'branch-delete': 'bg-red-100 text-red-700',
+  'user-add': 'bg-indigo-100 text-indigo-700',
+  'user-delete': 'bg-red-100 text-red-700',
+  'excel-import': 'bg-teal-100 text-teal-700',
 }
 
 export default function AuditLog() {

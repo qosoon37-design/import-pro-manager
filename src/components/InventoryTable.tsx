@@ -8,6 +8,7 @@ const sourceConfig: Record<Source, { label: string; bg: string; text: string }> 
   manual: { label: 'يدوي', bg: 'bg-green-100', text: 'text-green-700' },
   'image-scan': { label: 'صورة-باركود', bg: 'bg-purple-100', text: 'text-purple-700' },
   'image-ocr': { label: 'صورة-OCR', bg: 'bg-pink-100', text: 'text-pink-700' },
+  'excel-import': { label: 'Excel', bg: 'bg-teal-100', text: 'text-teal-700' },
 }
 
 export default function InventoryTable() {
@@ -58,13 +59,14 @@ export default function InventoryTable() {
           <table className="w-full text-right">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">#</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">الباركود / النص</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">الرقم التسلسلي</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">الكمية</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">المصدر</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">الوقت</th>
-                <th className="px-4 py-3 text-sm font-bold text-gray-600">حذف</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">#</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">الكود</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">كراتين</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">وحدات</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">الفرع</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">المصدر</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">الوقت</th>
+                <th className="px-3 py-3 text-xs font-bold text-gray-500">حذف</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -72,28 +74,27 @@ export default function InventoryTable() {
                 const src = sourceConfig[item.source]
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                    <td className="px-4 py-3 text-sm font-mono font-semibold text-gray-800 max-w-[200px] truncate" title={item.barcode}>
+                    <td className="px-3 py-2.5 text-xs text-gray-500">{index + 1}</td>
+                    <td className="px-3 py-2.5 text-sm font-mono font-semibold text-gray-800 max-w-[160px] truncate" title={item.barcode}>
                       {item.imageDataUrl && (
                         <span className="ml-1 inline-block align-middle text-purple-400" title="مرفق صورة">
-                          <svg className="inline h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="inline h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </span>
                       )}
                       {item.barcode}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500 font-mono">
-                      {item.serial || '-'}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{item.quantity}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${src.bg} ${src.text}`}>
+                    <td className="px-3 py-2.5 text-sm text-gray-600">{item.cartons || '-'}</td>
+                    <td className="px-3 py-2.5 text-sm text-gray-700 font-bold">{item.units || item.quantity}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-500">{item.branch || '-'}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${src.bg} ${src.text}`}>
                         {src.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{formatTime(item.timestamp)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{formatTime(item.timestamp)}</td>
+                    <td className="px-3 py-2.5">
                       <button
                         onClick={() => handleDelete(item.id)}
                         className="rounded-lg p-1.5 text-red-400 transition hover:bg-red-100 hover:text-red-600 cursor-pointer"

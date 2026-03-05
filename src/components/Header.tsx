@@ -1,5 +1,6 @@
 import { useClock } from '../hooks/useClock'
 import { useInventoryStore } from '../store/useInventoryStore'
+import { useAuthStore } from '../store/useAuthStore'
 import { useToastStore } from '../store/useToastStore'
 import { exportToExcel } from '../utils/exportExcel'
 
@@ -13,6 +14,8 @@ export default function Header({ onSessionExpired }: HeaderProps) {
   const clearAll = useInventoryStore((s) => s.clearAll)
   const logAudit = useInventoryStore((s) => s.logAudit)
   const showToast = useToastStore((s) => s.showToast)
+  const currentUser = useAuthStore((s) => s.currentUser)
+  const logout = useAuthStore((s) => s.logout)
 
   const handleExport = () => {
     if (items.length === 0) {
@@ -33,7 +36,8 @@ export default function Header({ onSessionExpired }: HeaderProps) {
   }
 
   const handleLogout = () => {
-    logAudit('logout', 'خروج يدوي')
+    logAudit('logout', `خروج: ${currentUser?.displayName || 'مستخدم'}`)
+    logout()
     onSessionExpired()
   }
 
@@ -51,26 +55,30 @@ export default function Header({ onSessionExpired }: HeaderProps) {
           </svg>
         </div>
         <div>
-          <h1 className="font-bold text-gray-800">المخزون الذكي</h1>
-          <p className="text-xs text-gray-500">{time}</p>
+          <h1 className="font-bold text-gray-800 text-sm">المخزون الذكي</h1>
+          <p className="text-[10px] text-gray-500">
+            {currentUser?.displayName || 'مستخدم'}
+            {currentUser?.role === 'admin' && <span className="mr-1 text-red-500">(مشرف)</span>}
+            <span className="mr-2">{time}</span>
+          </p>
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         <button
           onClick={handleExport}
-          className="rounded-lg bg-green-500 px-3 py-2 text-sm font-bold text-white transition hover:bg-green-600 active:scale-95 cursor-pointer"
+          className="rounded-lg bg-green-500 px-2.5 py-2 text-xs font-bold text-white transition hover:bg-green-600 active:scale-95 cursor-pointer"
         >
           Excel
         </button>
         <button
           onClick={handleClear}
-          className="rounded-lg bg-red-500 px-3 py-2 text-sm font-bold text-white transition hover:bg-red-600 active:scale-95 cursor-pointer"
+          className="rounded-lg bg-red-500 px-2.5 py-2 text-xs font-bold text-white transition hover:bg-red-600 active:scale-95 cursor-pointer"
         >
-          مسح الكل
+          مسح
         </button>
         <button
           onClick={handleLogout}
-          className="rounded-lg bg-gray-500 px-3 py-2 text-sm font-bold text-white transition hover:bg-gray-600 active:scale-95 cursor-pointer"
+          className="rounded-lg bg-gray-500 px-2.5 py-2 text-xs font-bold text-white transition hover:bg-gray-600 active:scale-95 cursor-pointer"
           title="خروج"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

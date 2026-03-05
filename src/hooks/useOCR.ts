@@ -5,6 +5,7 @@ interface UseOCRResult {
   isProcessing: boolean
   progress: number
   recognizedText: string
+  capturedImage: string | null
   setRecognizedText: (text: string) => void
   captureAndRecognize: (videoElement: HTMLVideoElement) => Promise<void>
   startCamera: () => Promise<MediaStream | null>
@@ -15,6 +16,7 @@ export function useOCR(onError?: (msg: string) => void): UseOCRResult {
   const [isProcessing, setIsProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [recognizedText, setRecognizedText] = useState('')
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   const startCamera = useCallback(async (): Promise<MediaStream | null> => {
@@ -44,11 +46,14 @@ export function useOCR(onError?: (msg: string) => void): UseOCRResult {
       canvas.height = videoElement.videoHeight || 480
       canvas.getContext('2d')!.drawImage(videoElement, 0, 0)
 
+      const frameDataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      setCapturedImage(frameDataUrl)
+
       setIsProcessing(true)
       setProgress(0)
 
       try {
-        const result = await Tesseract.recognize(canvas.toDataURL(), 'ara+eng', {
+        const result = await Tesseract.recognize(frameDataUrl, 'ara+eng', {
           logger: (m) => {
             if (m.status === 'recognizing text') {
               setProgress(Math.round((m.progress ?? 0) * 100))
@@ -74,6 +79,7 @@ export function useOCR(onError?: (msg: string) => void): UseOCRResult {
     isProcessing,
     progress,
     recognizedText,
+    capturedImage,
     setRecognizedText,
     captureAndRecognize,
     startCamera,
