@@ -1,0 +1,22 @@
+{  
+  "name": "import-pro-manager",  
+  "version": "1.0.0",  
+  "private": true,  
+  "scripts": {  
+    "dev": "next dev",  
+    "build": "next build",  
+    "start": "next start"  
+  },  
+  "dependencies": {  
+    "next": "^14.0.0",  
+    "react": "^18.0.0",  
+    "react-dom": "^18.0.0",  
+    "zustand": "^4.0.0",  
+    "tailwindcss": "^2.2.19",  
+    "postcss": "^8.4.14",  
+    "autoprefixer": "^10.4.14"  
+  },  
+  "devDependencies": {  
+    "typescript": "^4.9.5"  
+  }  
+}
